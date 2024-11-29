@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/resources">
+        <file>richspan_icon.ico</file>
+        <file>richspan_icon.png</file>
+    </qresource>
+</RCC>
