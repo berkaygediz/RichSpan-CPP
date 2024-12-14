@@ -106,11 +106,12 @@ void RS_Workspace::initUI() {
         settings.sync();
     }
     QWidget *centralWidget = new QWidget(this);
-    setCentralWidget(centralWidget);
-
     QVBoxLayout *layout = new QVBoxLayout(centralWidget);
 
     documentArea = new QTextEdit(this);
+    documentArea->setFocus();
+    documentArea->setAcceptRichText(true);
+    documentArea->setTextInteractionFlags(Qt::TextEditorInteraction);
     layout->addWidget(documentArea);
 
     setCentralWidget(centralWidget);
@@ -125,12 +126,7 @@ void RS_Workspace::initUI() {
     directory = defaultDirectory;
 
     LLMinitDock();
-    ai_widget.hide();
-
     QStatusBar *status_bar = statusBar();
-
-    documentArea = new QTextEdit(this);
-    documentArea->setTextInteractionFlags(Qt::TextEditorInteraction);
     // documentArea->setContextMenuPolicy(Qt::CustomContextMenu);
     // connect(documentArea,
     //         &QTextEdit::customContextMenuRequested,
@@ -138,7 +134,6 @@ void RS_Workspace::initUI() {
     //         &RS_Workspace::showContextMenu);
 
     initArea();
-    layout->addWidget(documentArea);
 
     documentArea->setDisabled(true);
 
@@ -149,11 +144,11 @@ void RS_Workspace::initUI() {
     setPalette(lightTheme);
 
     showMaximized();
-    documentArea->setFocus();
-    documentArea->setAcceptRichText(true);
 
-    // QTimer::singleShot(50 * adaptiveResponse, this, &RS_Workspace::restoreTheme);
-    // QTimer::singleShot(150 * adaptiveResponse, this, &RS_Workspace::restoreState);
+
+    // QTimer::singleShot(50 * adaptiveResponse, this,
+    // &RS_Workspace::restoreTheme); QTimer::singleShot(150 * adaptiveResponse,
+    // this, &RS_Workspace::restoreState);
 
     documentArea->setDisabled(false);
 
@@ -172,9 +167,9 @@ void RS_Workspace::changeLanguage() {
     settings.setValue("appLanguage", language_combobox->currentData());
     settings.sync();
 
-    toolbarTranslate(); 
-    updateStatistics(); 
-    updateTitle();  
+    toolbarTranslate();
+    updateStatistics();
+    updateTitle();
 }
 
 void RS_Workspace::updateTitle() {
@@ -224,104 +219,70 @@ void RS_Workspace::closeEvent(QCloseEvent *event) {
         // saveState();
         event->accept();
     }
-}
-
-void RS_Workspace::updateStatistics() {
-    // text_changed_timer->stop();
-    // thread_running = false;
-
+}void RS_Workspace::updateStatistics() {
     QString text = documentArea->toPlainText();
 
     int character_count = text.length();
     int word_count = text.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts).size();
     int line_count = text.count("\n") + 1;
 
-    double avg_word_length = 0;
-    double avg_line_length = 0;
+    double avg_word_length = 0.0;
+    double avg_line_length = 0.0;
     int uppercase_count = 0;
     int lowercase_count = 0;
     QString detected_language;
     QString lang = settings.value("appLanguage").toString();
 
     if (word_count > 0 && line_count > 0 && character_count > 0 && !text.isEmpty()) {
-        avg_word_length = static_cast<double>(text.length()) / word_count;
-        QString formatted_avg_word_length = QString::number(avg_word_length, 'f', 1);
-
-        avg_line_length = (character_count / line_count) - 1;
-        QString formatted_avg_line_length = QString::number(avg_line_length, 'f', 1);
+        avg_word_length = static_cast<double>(character_count) / word_count;
+        avg_line_length = static_cast<double>(character_count) / line_count;
 
         for (QChar c : text) {
-            if (c.isUpper())
-                uppercase_count++;
-            if (c.isLower())
-                lowercase_count++;
+            if (c.isUpper()) uppercase_count++;
+            if (c.isLower()) lowercase_count++;
         }
-
-        QString statistics = "<html><head><style>"
-                             "table {border-collapse: collapse; width: 100%;}"
-                             "th, td {text-align: left; padding: 10px;}"
-                             "tr:nth-child(even) {background-color: #f2f2f2;}"
-                             ".highlight {background-color: #E2E3E1; color: #000000}"
-                             "tr:hover {background-color: #ddd;}"
-                             "th { background-color: #0379FF; color: white;}"
-                             "td { color: white;}"
-                             "#rs-text { background-color: #E2E3E1; color: #000000; }"
-                             "</style></head><body>"
-                             "<table><tr>";
-
-        if (avg_word_length != 0) {
-            statistics += QString("<th>%1</th>").arg(translations[lang]["analysis"]);
-            statistics += QString("<td>%1</td>")
-                              .arg(translations[lang]["analysis_message_1"].arg(
-                                  formatted_avg_word_length));
-            statistics += QString("<td>%1</td>")
-                              .arg(translations[lang]["analysis_message_2"].arg(
-                                  formatted_avg_line_length));
-            statistics += QString("<td>%1</td>")
-                              .arg(translations[lang]["analysis_message_3"].arg(uppercase_count));
-            statistics += QString("<td>%1</td>")
-                              .arg(translations[lang]["analysis_message_4"].arg(lowercase_count));
-            if (!detected_language.isEmpty()) {
-                statistics += QString("<td>%1</td>")
-                                  .arg(translations[lang]["analysis_message_5"].arg(
-                                      detected_language));
-            }
-        } else {
-            documentArea->setFontFamily(fallback.fontFamily);
-            documentArea->setFontPointSize(fallback.fontSize);
-            documentArea->setFontWeight(fallback.bold ? 75 : 50);
-            documentArea->setFontItalic(fallback.italic);
-            documentArea->setFontUnderline(fallback.italic);
-            documentArea->setAlignment(fallback.contentAlign);
-            documentArea->setTextColor(QColor(fallback.contentColor));
-            documentArea->setTextBackgroundColor(QColor(fallback.contentBackgroundColor));
-        }
-
-        statistics += QString("<th>%1</th>").arg(translations[lang]["statistic"]);
-        statistics += QString("<td>%1</td>")
-                          .arg(translations[lang]["statistic_message_1"].arg(line_count));
-        statistics += QString("<td>%1</td>")
-                          .arg(translations[lang]["statistic_message_2"].arg(word_count));
-        statistics += QString("<td>%1</td>")
-                          .arg(translations[lang]["statistic_message_3"].arg(character_count));
-        statistics += QString("</td><th id='rs-text'>%1</th>").arg(qApp->applicationDisplayName());
-
-        statistics += "</tr></table></body></html>";
-
-        statistics_label->setText(statistics);
-
-        statusBar()->addPermanentWidget(statistics_label);
-
-        // new_text = documentArea->toPlainText();
-        // if (new_text != fallback.content) {
-        //     isSaved = false;
-        // } else {
-        //     isSaved = true;
-        // }
-
-        updateTitle();
     }
+
+    QString statistics = "<html><head><style>"
+                         "table {border-collapse: collapse; width: 100%;}"
+                         "th, td {text-align: left; padding: 10px;}"
+                         "tr:nth-child(even) {background-color: #f2f2f2;}"
+                         "tr:hover {background-color: #ddd;}"
+                         "th {background-color: #0379FF; color: white;}"
+                         "td {color: white;}"
+                         "#rs-text {background-color: #E2E3E1; color: #000000;}"
+                         "</style></head><body><table><tr>";
+
+    statistics += QString("<th>%1</th>").arg(translations[lang]["analysis"]);
+    statistics += QString("<td>%1</td>").arg(translations[lang]["analysis_message_1"].arg(QString::number(avg_word_length, 'f', 1)));
+    statistics += QString("<td>%1</td>").arg(translations[lang]["analysis_message_2"].arg(QString::number(avg_line_length, 'f', 1)));
+    statistics += QString("<td>%1</td>").arg(translations[lang]["analysis_message_3"].arg(uppercase_count));
+    statistics += QString("<td>%1</td>").arg(translations[lang]["analysis_message_4"].arg(lowercase_count));
+
+    if (!detected_language.isEmpty()) {
+        statistics += QString("<td>%1</td>").arg(translations[lang]["analysis_message_5"].arg(detected_language));
+    }
+
+    statistics += QString("<th>%1</th>").arg(translations[lang]["statistic"]);
+    statistics += QString("<td>%1</td>").arg(translations[lang]["statistic_message_1"].arg(line_count));
+    statistics += QString("<td>%1</td>").arg(translations[lang]["statistic_message_2"].arg(word_count));
+    statistics += QString("<td>%1</td>").arg(translations[lang]["statistic_message_3"].arg(character_count));
+
+    statistics += QString("<th id='rs-text'>%1</th>").arg(qApp->applicationDisplayName());
+
+    statistics += "</tr></table></body></html>";
+
+
+    QString new_text = documentArea->toPlainText();
+    if (new_text != fallback.content) {
+        isSaved = false;
+    } else {
+        isSaved = true;
+    }
+
+    updateTitle();
 }
+
 
 void RS_Workspace::themePalette()
 {
@@ -463,13 +424,11 @@ void RS_Workspace::LLMwarningCPU() {
                       "the risks associated with these operations. "
                       "Do you still wish to continue?";
 
-    QMessageBox::StandardButton reply
-        = QMessageBox::question(this,
-                                QString(),
-                                message,                            
-                                QMessageBox::Yes | QMessageBox::No, 
-                                QMessageBox::No                     
-        );
+    QMessageBox::StandardButton reply = QMessageBox::question(this,
+                                                              QString(),
+                                                              message,
+                                                              QMessageBox::Yes | QMessageBox::No,
+                                                              QMessageBox::No);
 
     if (reply == QMessageBox::Yes) {
         // QTimer::singleShot(500, this, &RS_Workspace::loadLLM);
@@ -481,10 +440,9 @@ void RS_Workspace::LLMwarningCPU() {
 }
 
 void RS_Workspace::LLMinitDock() {
-    QDockWidget ai_widget;
-    ai_widget.setObjectName("AI");
-    ai_widget.setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    // addDockWidget(Qt::RightDockWidgetArea, ai_widget);
+    QDockWidget *ai_widget = new QDockWidget("AI", this);
+    ai_widget->setObjectName("AI");
+    ai_widget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
 
     QVBoxLayout *main_layout = new QVBoxLayout();
 
@@ -512,9 +470,11 @@ void RS_Workspace::LLMinitDock() {
 
     QWidget *container = new QWidget();
     container->setLayout(main_layout);
-    ai_widget.setWidget(container);
 
-    ai_widget.setFeatures(QDockWidget::NoDockWidgetFeatures | QDockWidget::DockWidgetClosable);
+    ai_widget->setWidget(container);
+    ai_widget->setFeatures(QDockWidget::DockWidgetClosable);
+
+    addDockWidget(Qt::RightDockWidgetArea, ai_widget);
 }
 
 void RS_Workspace::LLMmessage(const QString &text, bool is_user = true) {
@@ -607,8 +567,7 @@ void RS_Workspace::LLMprompt(const QString &prompt) {
 
 QString RS_Workspace::LLMresponse(const QString &prompt) {
     try {
-        // Simulating a response from an LLM (e.g., calling an API)
-        QString response = "Simulated response to: " + prompt; // Replace with real LLM call
+        QString response = "Simulated response to: " + prompt;
         return response;
     } catch (const std::exception &e) {
         return QString("Error: %1").arg(e.what());
@@ -701,14 +660,11 @@ QString RS_Workspace::LLMescapeHTML(const QString &text) {
 QAction *RS_Workspace::createAction(const QString &text,
                                     const QString &statusTip,
                                     std::function<void()> function,
-                                    const QKeySequence &shortcut)
-{
+                                    const QKeySequence &shortcut) {
     QAction *action = new QAction(text);
     action->setStatusTip(statusTip);
 
-    connect(action, &QAction::triggered, this, [this, function]() {
-        function();
-    });
+    connect(action, &QAction::triggered, this, [this, function]() { function(); });
 
     if (!shortcut.isEmpty()) {
         action->setShortcut(shortcut);
@@ -717,8 +673,7 @@ QAction *RS_Workspace::createAction(const QString &text,
     return action;
 }
 
-void RS_Workspace::toolbarLabel(QToolBar *toolbar, const QString &text)
-{
+void RS_Workspace::toolbarLabel(QToolBar *toolbar, const QString &text) {
     QLabel *label = new QLabel("<b>" + text + "</b>");
     toolbar->addWidget(label);
 }
@@ -792,7 +747,7 @@ void RS_Workspace::initActions() {
          "Numbered List",
          "Insert a numbered list",
          [this]() { numberedList(); },
-        QKeySequence("Ctrl+Shift+O")},
+         QKeySequence("Ctrl+Shift+O")},
         {"bold", "Bold", "Bold the selected text", [this]() { contentBold(); }, QKeySequence::Bold},
         {"italic",
          "Italic",
@@ -1061,9 +1016,11 @@ void RS_Workspace::initToolbar() {
     ui_toolbar->addAction(hide_ai_dock);
 
     // ui_toolbar->addAction(
-        // createAction("Help", "View help", [this]() { viewHelp(); }, QKeySequence("Ctrl+H")));
+    // createAction("Help", "View help", [this]() { viewHelp(); },
+    // QKeySequence("Ctrl+H")));
     // ui_toolbar->addAction(
-        // createAction("About", "View about", [this]() { viewAbout(); }, QKeySequence("Ctrl+Shift+I")));
+    // createAction("About", "View about", [this]() { viewAbout(); },
+    // QKeySequence("Ctrl+Shift+I")));
 
     language_combobox = new QComboBox(this);
     for (const auto &language : languages) {
@@ -1137,31 +1094,29 @@ void RS_Workspace::initToolbar() {
 
     color_toolbar = addToolBar("Color");
     toolbarLabel(color_toolbar, "Color: ");
-    color_toolbar->addActions({createAction(
-                                   "Font Color",
-                                   "Change font color",
-                                   [this]() { contentColor(); },
-                                   QKeySequence(Qt::CTRL + Qt::Key_B)),
-                               createAction(
-                                   "Background Color",
-                                   "Change background color",
-                                   [this]() { contentBGColor(); },
-                                   QKeySequence(Qt::CTRL + Qt::Key_B)),
-                               createAction(
-                                   "Font Family",
-                                   "Change font family",
-                                   [this]() { contentFont(); },
-                                   QKeySequence(Qt::CTRL + Qt::Key_F)),
-                               createAction(
-                                   "Increase Font",
-                                   "Increase font size",
-                                   [this]() { incFont(); },
-                                   QKeySequence(Qt::CTRL + Qt::Key_J)),
-                               createAction(
-                                   "Decrease Font",
-                                   "Decrease font size",
-                                   [this]() { decFont(); },
-                                   QKeySequence(Qt::CTRL + Qt::Key_Minus))});
+    color_toolbar->addActions(
+        {createAction(
+             "Font Color",
+             "Change font color",
+             [this]() { contentColor(); },
+             QKeySequence(Qt::CTRL + Qt::Key_B)),
+         createAction(
+             "Background Color",
+             "Change background color",
+             [this]() { contentBGColor(); },
+             QKeySequence(Qt::CTRL + Qt::Key_B)),
+         createAction(
+             "Font Family",
+             "Change font family",
+             [this]() { contentFont(); },
+             QKeySequence(Qt::CTRL + Qt::Key_F)),
+         createAction(
+             "A+", "Increase font size", [this]() { incFont(); }, QKeySequence(Qt::CTRL + Qt::Key_J)),
+         createAction(
+             "A-",
+             "Decrease font size",
+             [this]() { decFont(); },
+             QKeySequence(Qt::CTRL + Qt::Key_Minus))});
 
     multimedia_toolbar = addToolBar("Multimedia");
     toolbarLabel(multimedia_toolbar, "Multimedia: ");
@@ -1221,8 +1176,7 @@ QString RS_Workspace::detectEncoding(const QString &file_path) {
     return "UTF-8";
 }
 
-void RS_Workspace::newFile()
-{
+void RS_Workspace::newFile() {
     if (isSaved) {
         documentArea->clear();
         initArea();
@@ -1257,7 +1211,8 @@ void RS_Workspace::openFile() {
     // QString selected_file = file_to_open.isEmpty()
     //                             ? QFileDialog::getOpenFileName(this,
     //                                                            "Open — "
-    //                                                                + qApp->applicationDisplayName(),
+    //                                                                +
+    //                                                                qApp->applicationDisplayName(),
     //                                                            directory,
     //                                                            fallback.readFilter,
     //                                                            options)
@@ -1301,14 +1256,14 @@ void RS_Workspace::saveFile() {
     }
 }
 
-bool RS_Workspace::saveAs()
-{
+bool RS_Workspace::saveAs() {
     // QFileDialog::Options options;
     // options |= QFileDialog::ReadOnly;
 
     // QString selected_file = QFileDialog::getSaveFileName(this,
     //                                                      "Save As — "
-    //                                                          + qApp->applicationDisplayName(),
+    //                                                          +
+    //                                                          qApp->applicationDisplayName(),
     //                                                      directory,
     //                                                      fallback.writeFilter,
     //                                                      options);
@@ -1354,6 +1309,6 @@ void RS_Workspace::printDocument() {
     // printer.setDocName(fileName);
 
     // QPrintPreviewDialog preview_dialog(&printer, this);
-    // connect(&preview_dialog, &QPrintPreviewDialog::paintRequested, documentArea, &QTextEdit::print);
-    // preview_dialog.exec();
+    // connect(&preview_dialog, &QPrintPreviewDialog::paintRequested,
+    // documentArea, &QTextEdit::print); preview_dialog.exec();
 }
